@@ -1,36 +1,36 @@
-// src/config/firebase.js
-import admin from 'firebase-admin';
+import { initializeApp, cert } from 'firebase-admin/app'
+import { getFirestore } from 'firebase-admin/firestore'
+import { getAuth } from 'firebase-admin/auth'
+import dotenv from 'dotenv'
 
-// Ensure the SDK is initialized only once
-if (!admin.apps.length) {
-  try {
-    // All sensitive values are pulled from environment variables
-    const firebaseConfig = {
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // The private key from Render is now read directly. 
-        // The SDK handles the multi-line format automatically.
-        privateKey: process.env.FIREBASE_PRIVATE_KEY,
-      }),
-      databaseURL: process.env.FIREBASE_DATABASE_URL,
-    };
+dotenv.config()
 
-    // Log a safe check to confirm variables are loaded (don't log the key!)
-    console.log(`Initializing Firebase Admin for project: ${process.env.FIREBASE_PROJECT_ID}`);
-    console.log(`Client email: ${process.env.FIREBASE_CLIENT_EMAIL}`);
-    console.log(`Database URL: ${process.env.FIREBASE_DATABASE_URL}`);
+try {
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  const projectId = process.env.FIREBASE_PROJECT_ID
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
 
-    admin.initializeApp(firebaseConfig);
-    console.log('✅ Firebase Admin SDK initialized successfully.');
-  } catch (error) {
-    console.error('❌ CRITICAL: Failed to initialize Firebase Admin SDK:', error);
-    // In a production environment, you might want to exit the process
-    // process.exit(1);
+  if (!privateKey || !projectId || !clientEmail) {
+    throw new Error('Missing required Firebase environment variables')
   }
+
+  console.log('Initializing with env vars for:', projectId)
+
+  initializeApp({
+    credential: cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    })
+  })
+
+  console.log('✅ Firebase initialized successfully')
+} catch (error) {
+  console.error('❌ Failed to initialize Firebase:', error.message)
+  process.exit(1)
 }
 
-const db = admin.firestore();
+const db = getFirestore()
+const auth = getAuth()
 
-// Export both admin and db for use in other parts of your application
-export { admin, db };
+export { db, auth }
